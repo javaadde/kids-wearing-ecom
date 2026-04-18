@@ -4,15 +4,16 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Pencil, Trash2, Loader2, AlertCircle, Tags, Search, X } from "lucide-react";
 import Image from "next/image";
+import { Collection } from "@/types";
 import CollectionForm from "@/components/admin/CollectionForm";
 
 export default function CollectionsPage() {
-  const [collections, setCollections] = useState<any[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<any | null>(null);
+  const [editing, setEditing] = useState<Collection | null>(null);
 
   useEffect(() => {
     fetchCollections();
@@ -25,14 +26,14 @@ export default function CollectionsPage() {
       const data = await res.json();
       if (data.collections) setCollections(data.collections);
       else setError(data.error || "Failed to fetch");
-    } catch (err) {
+    } catch {
       setError("Network error");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSave = async (data: any) => {
+  const handleSave = async (data: Partial<Collection>) => {
     try {
       const url = editing ? `/api/collections/${editing._id}` : "/api/collections";
       const method = editing ? "PUT" : "POST";

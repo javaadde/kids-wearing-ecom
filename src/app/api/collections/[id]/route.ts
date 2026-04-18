@@ -14,8 +14,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     const collection = await Collection.findByIdAndUpdate(params.id, body, { new: true });
     return NextResponse.json({ collection });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Update failed" }, { status: 500 });
   }
 }
 
@@ -24,7 +24,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     await connectDB();
     await Collection.findByIdAndDelete(params.id);
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Delete failed" }, { status: 500 });
   }
 }

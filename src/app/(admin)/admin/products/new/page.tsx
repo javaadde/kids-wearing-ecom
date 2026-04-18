@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, ArrowLeft, Image as ImageIcon, Loader2, Tags, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { Product, SizeStock } from "@/types";
@@ -46,22 +46,22 @@ export default function NewProductPage() {
   const [images, setImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
-  useEffect(() => {
-    fetchCollections();
-  }, [category]);
-
-  const fetchCollections = async () => {
+  const fetchCollections = useCallback(async () => {
     try {
       setCollectionLoading(true);
       const res = await fetch(`/api/collections?category=${category}`);
       const data = await res.json();
       if (data.collections) setCollections(data.collections);
-    } catch (err) {
-      console.error("Error fetching collections:", err);
+    } catch {
+      console.error("Error fetching collections");
     } finally {
       setCollectionLoading(false);
     }
-  };
+  }, [category]);
+
+  useEffect(() => {
+    fetchCollections();
+  }, [fetchCollections]);
 
   const handleColImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -96,7 +96,7 @@ export default function NewProductPage() {
         setNewCollectionName("");
         setNewCollectionImage("");
       }
-    } catch (err) {
+    } catch {
       alert("Failed to add collection");
     }
   };
@@ -185,7 +185,7 @@ export default function NewProductPage() {
         const data = await res.json();
         alert("Error: " + (data.error || "Failed to save product"));
       }
-    } catch (error) {
+    } catch {
       alert("Failed to connect to server");
     }
   };
@@ -323,8 +323,9 @@ export default function NewProductPage() {
                       }
                     }} 
                     className="input-field w-full appearance-none pr-10"
+                    disabled={collectionLoading}
                   >
-                    <option value="">None</option>
+                    <option value="">{collectionLoading ? "Loading..." : "None"}</option>
                     {collections.map((c) => <option key={c._id} value={c.name}>{c.name}</option>)}
                     <option value="ADD_NEW" className="font-bold">+ Add New</option>
                   </select>

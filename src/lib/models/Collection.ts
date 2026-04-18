@@ -4,7 +4,7 @@ export interface ICollection extends Document {
   name: string;
   slug: string;
   category: "boys" | "girls" | "infants" | "unisex" | "all";
-  image?: string;
+  backgroundImage?: string;
 }
 
 const CollectionSchema = new Schema<ICollection>(

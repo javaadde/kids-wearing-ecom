@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
-import { Plus, Pencil, Trash2, Search, X, Loader2, AlertCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, X, Loader2, AlertCircle, Image as ImageIcon } from "lucide-react";
 import ProductForm from "@/components/admin/ProductForm";
 import { Product } from "@/types";
 

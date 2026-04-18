@@ -8,14 +8,14 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const category = searchParams.get("category");
     
-    const query: any = {};
+    const query: { category?: string; $or?: { category: string }[] } = {};
     if (category) {
       query.$or = [{ category: category }, { category: "all" }];
     }
 
     const collections = await Collection.find(query).sort({ name: 1 }).lean();
     return NextResponse.json({ collections });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Failed to fetch collections" }, { status: 500 });
   }
 }
@@ -32,8 +32,9 @@ export async function POST(req: NextRequest) {
 
     const collection = await Collection.create(body);
     return NextResponse.json({ collection }, { status: 201 });
-  } catch (error: any) {
-    const msg = error.code === 11000 ? "Collection already exists" : error.message;
+  } catch (error: unknown) {
+    const err = error as { code?: number; message?: string };
+    const msg = err.code === 11000 ? "Collection already exists" : err.message || "Failed to create";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

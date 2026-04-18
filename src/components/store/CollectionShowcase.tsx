@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, ChevronRight } from "lucide-react";
@@ -17,8 +17,8 @@ export default function CollectionShowcase() {
       .then((r) => r.json())
       .then((data) => {
         if (data.collections) {
-          setBoys(data.collections.filter((c: any) => c.category === "boys"));
-          setGirls(data.collections.filter((c: any) => c.category === "girls"));
+          setBoys(data.collections.filter((c: Collection) => c.category === "boys"));
+          setGirls(data.collections.filter((c: Collection) => c.category === "girls"));
         }
       })
       .catch((err) => console.error("Showcase fetch error:", err))

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Trash2, Image as ImageIcon, Loader2, Tags } from "lucide-react";
 import Image from "next/image";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Product, SizeStock } from "@/types";
 
 interface Props {
@@ -51,22 +51,22 @@ export default function ProductForm({ product, onSave, onClose }: Props) {
   const [images, setImages] = useState<string[]>(product?.images || []);
   const [isUploading, setIsUploading] = useState(false);
 
-  useEffect(() => {
-    fetchCollections();
-  }, [category]);
-
-  const fetchCollections = async () => {
+  const fetchCollections = useCallback(async () => {
     try {
       setCollectionLoading(true);
       const res = await fetch(`/api/collections?category=${category}`, { cache: "no-store" });
       const data = await res.json();
       if (data.collections) setCollections(data.collections);
-    } catch (err) {
-      console.error("Error fetching collections:", err);
+    } catch {
+      console.error("Error fetching collections");
     } finally {
       setCollectionLoading(false);
     }
-  };
+  }, [category]);
+
+  useEffect(() => {
+    fetchCollections();
+  }, [fetchCollections]);
 
   const handleColImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -102,7 +102,7 @@ export default function ProductForm({ product, onSave, onClose }: Props) {
         setNewCollectionName("");
         setNewCollectionBackgroundImage("");
       }
-    } catch (err) {
+    } catch {
       alert("Failed to add collection");
     } finally {
       setIsColSaving(false);
@@ -326,8 +326,9 @@ export default function ProductForm({ product, onSave, onClose }: Props) {
                         }
                       }} 
                       className="input-field w-full pr-8 appearance-none"
+                      disabled={collectionLoading}
                     >
-                      <option value="">None</option>
+                      <option value="">{collectionLoading ? "Loading..." : "None"}</option>
                       {collections.map((c) => <option key={c._id} value={c.name}>{c.name}</option>)}
                       <option value="ADD_NEW" className="font-bold text-ink">+ Add New Collection</option>
                     </select>

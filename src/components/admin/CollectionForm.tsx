@@ -1,22 +1,23 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, ImageIcon, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
+import { X, ImageIcon, Loader2 } from "lucide-react";
 import Image from "next/image";
+import { Collection } from "@/types";
 
 interface Props {
-  collection: any | null;
-  onSave: (data: any) => void;
+  collection: Collection | null;
+  onSave: (data: Partial<Collection>) => void;
   onClose: () => void;
 }
 
-const CATEGORIES = ["boys", "girls", "infants", "unisex", "all"];
+const CATEGORIES = ["boys", "girls", "infants", "unisex", "all"] as const;
 
 export default function CollectionForm({ collection, onSave, onClose }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(collection?.name || "");
-  const [category, setCategory] = useState(collection?.category || "boys");
+  const [category, setCategory] = useState<Collection["category"]>(collection?.category || "boys");
   const [backgroundImage, setBackgroundImage] = useState(collection?.backgroundImage || "");
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
