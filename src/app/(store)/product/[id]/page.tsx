@@ -2,66 +2,66 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useParams } from "next/navigation";
-import { ShoppingBag, ChevronLeft, ChevronRight, Heart } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { ShoppingBag, ChevronLeft, ChevronRight, Heart, Loader2, ImageIcon } from "lucide-react";
+import Image from "next/image";
 import SizeSelector from "@/components/store/SizeSelector";
 import ProductCard from "@/components/store/ProductCard";
 import { useCartStore } from "@/store/cartStore";
 import { Product } from "@/types";
 import Link from "next/link";
 
-// Mock product for demo
-const MOCK: Product = {
-  _id: "1",
-  name: "Striped Cotton T-Shirt",
-  slug: "striped-cotton-tshirt",
-  category: "boys",
-  season: "summer",
-  price: 849,
-  originalPrice: 1199,
-  description:
-    "An essential piece re-imagined for the cool kid. Crafted in 100% breathable cotton with classic black-and-white stripes. Relaxed fit, easy care. Perfect for outdoor play, school, or weekend adventures.",
-  images: [],
-  sizes: [
-    { size: "XS", stock: 5 },
-    { size: "S", stock: 10 },
-    { size: "M", stock: 3 },
-    { size: "L", stock: 0 },
-    { size: "XL", stock: 0 },
-  ],
-  featured: true,
-  newArrival: true,
-  tags: ["summer", "boys", "essentials"],
-  createdAt: "",
-  updatedAt: "",
-};
-
-const RELATED: Product[] = [
-  { _id: "5", name: "Cargo Joggers", slug: "5", category: "boys", season: "all", price: 1099, description: "", images: [], sizes: [{ size: "S", stock: 3 }, { size: "M", stock: 6 }], featured: false, newArrival: true, tags: [], createdAt: "", updatedAt: "" },
-  { _id: "6", name: "Denim Jacket", slug: "6", category: "boys", season: "all", price: 1899, description: "", images: [], sizes: [{ size: "S", stock: 2 }, { size: "M", stock: 5 }], featured: false, newArrival: true, tags: [], createdAt: "", updatedAt: "" },
-  { _id: "3", name: "Linen Bucket Hat", slug: "3", category: "unisex", season: "summer", price: 499, description: "", images: [], sizes: [{ size: "One Size", stock: 15 }], featured: true, newArrival: true, tags: [], createdAt: "", updatedAt: "" },
-];
-
 type AddState = "idle" | "adding" | "done";
 
 export default function ProductDetailPage() {
   const { id } = useParams();
-  const [product, setProduct] = useState<Product>(MOCK);
+  const router = useRouter();
+  const [product, setProduct] = useState<Product | null>(null);
+  const [related, setRelated] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [currentImg, setCurrentImg] = useState(0);
   const [addState, setAddState] = useState<AddState>("idle");
   const [sizeError, setSizeError] = useState(false);
+  
   const { addItem, openCart } = useCartStore();
-  useEffect(() => {
-    fetch(`/api/products/${id}`)
-      .then((r) => r.json())
-      .then((data) => { if (data?.product) setProduct(data.product); })
-      .catch(() => {});
-  }, [id]);
 
-  const images = product.images.length > 0
-    ? product.images
-    : ["/placeholder-1.jpg", "/placeholder-2.jpg"];
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/products/${id}`);
+        const data = await res.json();
+        
+        if (data?.product) {
+          setProduct(data.product);
+          // Fetch related products (same category)
+          const relRes = await fetch(`/api/products?category=${data.product.category}`);
+          const relData = await relRes.json();
+          setRelated(relData.products?.filter((p: Product) => p._id !== id).slice(0, 4) || []);
+        } else {
+          router.push("/shop");
+        }
+      } catch (error) {
+        console.error("Fetch error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) fetchProduct();
+  }, [id, router]);
+
+  if (loading || !product) {
+    return (
+      <div className="min-h-screen pt-20 flex flex-col items-center justify-center gap-4">
+        <Loader2 className="animate-spin text-ink-faint" size={40} />
+        <p className="font-display font-bold text-ink-muted uppercase tracking-widest text-xs">Curating Details</p>
+      </div>
+    );
+  }
+
+  const images = product.images && product.images.length > 0 ? product.images : [];
 
   const handleAddToCart = () => {
     if (!selectedSize) { setSizeError(true); return; }
@@ -86,38 +86,43 @@ export default function ProductDetailPage() {
     : 0;
 
   return (
-    <div className="pt-16 min-h-screen">
+    <div className="pt-16 min-h-screen pb-20">
       {/* Breadcrumb */}
-      <div className="px-4 md:px-12 max-w-7xl mx-auto py-4 flex items-center gap-2">
-        <Link href="/shop" className="text-xs text-ink-muted hover:text-ink transition-colors font-medium flex items-center gap-1">
-          <ChevronLeft size={12} /> Shop
+      <div className="px-4 md:px-12 max-w-7xl mx-auto py-6 flex items-center gap-2">
+        <Link href="/shop" className="text-[10px] uppercase tracking-widest text-ink-muted hover:text-ink transition-colors font-bold flex items-center gap-1.5">
+          <ChevronLeft size={10} strokeWidth={3} /> Back to Shop
         </Link>
         <span className="text-ink-faint text-xs">/</span>
-        <span className="text-xs text-ink font-medium truncate">{product.name}</span>
+        <span className="text-[10px] uppercase tracking-widest text-ink font-bold truncate">{product.name}</span>
       </div>
 
-      <div className="px-4 md:px-12 max-w-7xl mx-auto grid md:grid-cols-2 gap-8 md:gap-16 pb-20">
+      <div className="px-4 md:px-12 max-w-7xl mx-auto grid md:grid-cols-2 gap-8 md:gap-16">
         {/* Image carousel */}
-        <div className="space-y-3">
-          <div className="relative aspect-[3/4] bg-cream-200 rounded-2xl overflow-hidden">
+        <div className="space-y-4">
+          <div className="relative aspect-[4/5] bg-cream-200 rounded-3xl overflow-hidden border border-cream-300 group">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentImg}
-                initial={{ opacity: 0, x: 40 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -40 }}
-                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                drag="x"
-                dragConstraints={{ left: 0, right: 0 }}
-                onDragEnd={(_, info) => {
-                  if (info.offset.x < -50) setCurrentImg(Math.min(images.length - 1, currentImg + 1));
-                  if (info.offset.x > 50) setCurrentImg(Math.max(0, currentImg - 1));
-                }}
-                className="absolute inset-0 cursor-grab active:cursor-grabbing"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.4 }}
+                className="absolute inset-0"
               >
-                <div className="w-full h-full bg-cream-300 flex items-center justify-center">
-                  <span className="text-ink-faint text-sm font-medium">Product Image {currentImg + 1}</span>
-                </div>
+                {images[currentImg] ? (
+                  <Image 
+                    src={images[currentImg]} 
+                    alt={product.name} 
+                    fill 
+                    priority
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-cream-100 text-ink-faint">
+                    <ImageIcon size={48} strokeWidth={1} />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">No Image Available</span>
+                  </div>
+                )}
               </motion.div>
             </AnimatePresence>
 
@@ -125,161 +130,171 @@ export default function ProductDetailPage() {
             {images.length > 1 && (
               <>
                 <button
-                  onClick={() => setCurrentImg(Math.max(0, currentImg - 1))}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-cream-50/80 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-cream-50 transition-colors z-10"
+                  onClick={() => setCurrentImg((prev) => (prev > 0 ? prev - 1 : images.length - 1))}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white transition-all text-ink shadow-lg opacity-0 group-hover:opacity-100"
                 >
-                  <ChevronLeft size={16} />
+                  <ChevronLeft size={20} />
                 </button>
                 <button
-                  onClick={() => setCurrentImg(Math.min(images.length - 1, currentImg + 1))}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-cream-50/80 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-cream-50 transition-colors z-10"
+                  onClick={() => setCurrentImg((prev) => (prev < images.length - 1 ? prev + 1 : 0))}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white transition-all text-ink shadow-lg opacity-0 group-hover:opacity-100"
                 >
-                  <ChevronRight size={16} />
+                  <ChevronRight size={20} />
                 </button>
               </>
             )}
 
             {/* Dots */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-10 bg-white/20 backdrop-blur-md px-3 py-2 rounded-full">
               {images.map((_, i) => (
                 <button
                   key={i}
                   onClick={() => setCurrentImg(i)}
-                  className={`w-1.5 h-1.5 rounded-full transition-all ${i === currentImg ? "bg-ink w-4" : "bg-ink/30"}`}
+                  className={`w-1.5 h-1.5 rounded-full transition-all ${i === currentImg ? "bg-white w-5" : "bg-white/40"}`}
                 />
               ))}
             </div>
           </div>
 
           {/* Thumbnails */}
-          <div className="flex gap-2 overflow-x-auto no-scrollbar">
-            {images.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrentImg(i)}
-                className={`relative flex-shrink-0 w-20 aspect-square rounded-xl overflow-hidden border-2 transition-all ${
-                  i === currentImg ? "border-ink" : "border-transparent"
-                }`}
-              >
-                <div className="w-full h-full bg-cream-300" />
-              </button>
-            ))}
-          </div>
+          {images.length > 1 && (
+            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+              {images.map((img, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentImg(i)}
+                  className={`relative flex-shrink-0 w-24 aspect-[4/5] rounded-2xl overflow-hidden border-2 transition-all ${
+                    i === currentImg ? "border-ink shadow-md" : "border-transparent opacity-60 hover:opacity-100"
+                  }`}
+                >
+                  <Image src={img} alt="Thumbnail" fill className="object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Product info */}
-        <div className="space-y-6">
-          {/* Tags */}
-          <div className="flex gap-2 flex-wrap">
-            {product.newArrival && (
-              <span className="bg-ink text-cream-50 text-[10px] font-display font-black tracking-widest uppercase px-3 py-1 rounded-full">
-                New
-              </span>
-            )}
-            <span className="bg-cream-200 text-ink-muted text-[10px] font-display font-semibold tracking-widest uppercase px-3 py-1 rounded-full">
-              {product.category}
-            </span>
-            <span className="bg-cream-200 text-ink-muted text-[10px] font-display font-semibold tracking-widest uppercase px-3 py-1 rounded-full">
-              {product.season}
-            </span>
-          </div>
-
-          <div>
-            <h1 className="font-display font-black text-2xl md:text-3xl text-ink leading-tight">
-              {product.name}
-            </h1>
-
-            {/* Price */}
-            <div className="flex items-baseline gap-3 mt-3">
-              <span className="font-display font-black text-2xl text-ink">
-                ₹{product.price.toLocaleString()}
-              </span>
-              {product.originalPrice && (
-                <>
-                  <span className="font-display text-base text-ink-faint line-through">
-                    ₹{product.originalPrice.toLocaleString()}
-                  </span>
-                  <span className="text-xs font-display font-bold text-rust">
-                    {discount}% OFF
-                  </span>
-                </>
+        <div className="flex flex-col h-full pt-4">
+          <div className="flex-1 space-y-8">
+            {/* Tags */}
+            <div className="flex gap-2.5 flex-wrap">
+              {product.newArrival && (
+                <span className="bg-ink text-cream-50 text-[10px] font-display font-black tracking-widest uppercase px-4 py-1.5 rounded-full shadow-lg shadow-ink/20">
+                  New Collection
+                </span>
               )}
+              <span className="bg-cream-200 text-ink-muted text-[10px] font-display font-bold tracking-widest uppercase px-4 py-1.5 rounded-full">
+                {product.category}
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              <h1 className="editorial-heading text-3xl md:text-5xl text-ink leading-[1.1]">
+                {product.name}
+              </h1>
+
+              {/* Price */}
+              <div className="flex items-center gap-4">
+                <span className="font-display font-black text-3xl text-ink">
+                  ₹{product.price.toLocaleString()}
+                </span>
+                {product.originalPrice && (
+                  <div className="flex items-center gap-2">
+                    <span className="font-display text-lg text-ink-faint line-through">
+                      ₹{product.originalPrice.toLocaleString()}
+                    </span>
+                    <span className="text-[10px] font-display font-black text-rust bg-rust/10 px-2 py-0.5 rounded uppercase tracking-wider">
+                      {discount}% OFF
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-3">
+              <p className="section-label">Journal</p>
+              <p className="text-base text-ink-muted leading-relaxed font-medium">
+                {product.description || "Curated for the modern wardrobe. This piece blends editorial style with everyday comfort, using premium materials and a children-first design philosophy."}
+              </p>
+            </div>
+
+            {/* Size selector */}
+            <div className="space-y-4 pt-4">
+              <div className="flex justify-between items-end">
+                <p className="section-label">Select Size</p>
+                <button className="text-[10px] font-bold uppercase tracking-widest text-ink-muted underline">Size Guide</button>
+              </div>
+              <SizeSelector
+                sizes={product.sizes}
+                selected={selectedSize}
+                onSelect={(size) => { setSelectedSize(size); setSizeError(false); }}
+              />
+              <AnimatePresence>
+                {sizeError && (
+                  <motion.p
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="text-[10px] uppercase font-black tracking-widest text-rust"
+                  >
+                    Please select a size to continue
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Add to cart */}
+            <div className="flex gap-4 pt-6">
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={handleAddToCart}
+                disabled={addState !== "idle"}
+                className={`flex-1 h-16 rounded-2xl font-display font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 ${
+                  addState === "done" 
+                    ? "bg-green-700 text-white" 
+                    : "bg-ink text-cream-50 hover:bg-ink-light"
+                }`}
+              >
+                <AnimatePresence mode="wait">
+                  {addState === "idle" && (
+                    <motion.span key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3">
+                      <ShoppingBag size={18} /> Add to Bag
+                    </motion.span>
+                  )}
+                  {addState === "adding" && (
+                    <motion.div key="adding" animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full" />
+                  )}
+                  {addState === "done" && (
+                    <motion.span key="done" initial={{ scale: 0.8 }} animate={{ scale: 1 }}>
+                      Successfully Added
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </motion.button>
+
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                className="w-16 h-16 flex items-center justify-center border border-cream-300 rounded-2xl hover:bg-cream-100 transition-colors"
+                aria-label="Wishlist"
+              >
+                <Heart size={20} strokeWidth={1.5} />
+              </motion.button>
             </div>
           </div>
 
-          {/* Description */}
-          <p className="text-sm text-ink-muted leading-relaxed font-medium">{product.description}</p>
-
-          {/* Size selector */}
-          <div>
-            <SizeSelector
-              sizes={product.sizes}
-              selected={selectedSize}
-              onSelect={(size) => { setSelectedSize(size); setSizeError(false); }}
-            />
-            <AnimatePresence>
-              {sizeError && (
-                <motion.p
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="text-xs text-rust font-medium mt-2"
-                >
-                  Please select a size to continue
-                </motion.p>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Add to cart */}
-          <div className="flex gap-3">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={handleAddToCart}
-              className={`flex-1 btn-primary justify-center transition-colors ${
-                addState === "done" ? "bg-green-800" : ""
-              }`}
-            >
-              <AnimatePresence mode="wait">
-                {addState === "idle" && (
-                  <motion.span key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2">
-                    <ShoppingBag size={16} /> Add to Bag
-                  </motion.span>
-                )}
-                {addState === "adding" && (
-                  <motion.span key="adding" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2">
-                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 0.7, ease: "linear" }} className="w-4 h-4 border-2 border-cream-50/40 border-t-cream-50 rounded-full" />
-                    Adding...
-                  </motion.span>
-                )}
-                {addState === "done" && (
-                  <motion.span key="done" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2">
-                    ✓ Added!
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </motion.button>
-
-            <motion.button
-              whileTap={{ scale: 0.92 }}
-              className="w-14 h-14 flex items-center justify-center border border-cream-300 rounded-xl hover:border-ink transition-colors"
-              aria-label="Wishlist"
-            >
-              <Heart size={18} strokeWidth={1.5} />
-            </motion.button>
-          </div>
-
-          {/* Details */}
-          <div className="border-t border-cream-300 pt-6 space-y-3">
+          {/* Details list */}
+          <div className="bg-white/50 border border-cream-200 rounded-3xl p-6 mt-12 grid grid-cols-2 gap-y-6 gap-x-8">
             {[
-              { label: "Material", value: "100% Breathable Cotton" },
-              { label: "Fit", value: "Relaxed / Oversized" },
-              { label: "Care", value: "Machine wash cold, tumble dry low" },
-              { label: "Origin", value: "Ethically made in India" },
+              { label: "Fabric", value: "Premium Blend" },
+              { label: "Cut", value: "Editorial Fit" },
+              { label: "Care", value: "Handle with Care" },
+              { label: "Status", value: "In Stock" },
             ].map((d) => (
-              <div key={d.label} className="flex justify-between text-sm">
-                <span className="text-ink-muted font-medium">{d.label}</span>
-                <span className="text-ink font-semibold">{d.value}</span>
+              <div key={d.label}>
+                <p className="text-[9px] uppercase font-black tracking-[0.15em] text-ink-faint mb-1">{d.label}</p>
+                <p className="text-xs font-bold text-ink">{d.value}</p>
               </div>
             ))}
           </div>
@@ -287,19 +302,24 @@ export default function ProductDetailPage() {
       </div>
 
       {/* Related products */}
-      <div className="px-4 md:px-12 max-w-7xl mx-auto py-12 border-t border-cream-300">
-        <motion.h2
-          initial={{ opacity: 0, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="editorial-heading text-2xl md:text-3xl mb-8"
-        >
-          You May Also Like
-        </motion.h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-          {RELATED.map((p, i) => <ProductCard key={p._id} product={p} index={i} />)}
+      {related.length > 0 && (
+        <div className="px-4 md:px-12 max-w-7xl mx-auto py-24 mt-12 border-t border-cream-300">
+          <div className="flex items-end justify-between mb-12">
+            <div>
+              <p className="section-label mb-2">Complete the look</p>
+              <h2 className="editorial-heading text-3xl md:text-4xl text-ink">
+                You May Also Like
+              </h2>
+            </div>
+            <Link href="/shop" className="text-[10px] font-black uppercase tracking-widest text-ink-muted hover:text-ink transition-colors pb-1 border-b border-cream-300">
+              See All
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
+            {related.map((p, i) => <ProductCard key={p._id} product={p} index={i} />)}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

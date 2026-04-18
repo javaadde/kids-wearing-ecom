@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Plus, Trash2, ArrowLeft, Image as ImageIcon } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Image as ImageIcon, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { CldUploadWidget } from "next-cloudinary";
 import Image from "next/image";
 import Link from "next/link";
 import { Product, SizeStock } from "@/types";
@@ -15,6 +14,7 @@ const SEASONS = ["summer", "winter", "all"];
 
 export default function NewProductPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -29,6 +29,7 @@ export default function NewProductPage() {
   
   // Image Upload state
   const [images, setImages] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   const autoSlug = (val: string) =>
     val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -38,10 +39,41 @@ export default function NewProductPage() {
   const updateSize = (i: number, field: keyof SizeStock, value: string | number) =>
     setSizes(sizes.map((s, idx) => idx === i ? { ...s, [field]: field === "stock" ? Number(value) : value } : s));
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleImageUpload = (result: any) => {
-    if (result.info && result.info.secure_url) {
-      setImages((prev) => [...prev, result.info.secure_url]);
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    const uploadedUrls: string[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          uploadedUrls.push(data.url);
+        } else {
+          console.error("Failed to upload image:", file.name);
+        }
+      } catch (error) {
+        console.error("Error uploading image:", error);
+      }
+    }
+
+    setImages((prev) => [...prev, ...uploadedUrls]);
+    setIsUploading(false);
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -68,13 +100,23 @@ export default function NewProductPage() {
       tags: [],
     };
 
-    // Normally this creates a new product in MongoDB
-    // await fetch('/api/products', { method: 'POST', body: JSON.stringify(payload) })
-    
-    // For now, let's pretend it saved successfully and go back to products page!
-    console.log("Saving Product:", payload);
-    alert("Product will be saved successfully! Redirecting...");
-    router.push("/admin/products");
+    try {
+      const res = await fetch('/api/products', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload) 
+      });
+      
+      if (res.ok) {
+        alert("Product published successfully!");
+        router.push("/admin/products");
+      } else {
+        const data = await res.json();
+        alert("Error: " + (data.error || "Failed to save product"));
+      }
+    } catch (error) {
+      alert("Failed to connect to server");
+    }
   };
 
   return (
@@ -98,10 +140,15 @@ export default function NewProductPage() {
           
           <div className="flex flex-wrap gap-4 mb-4">
             {images.map((imgUrl, idx) => (
-              <div key={idx} className="relative w-32 h-40 rounded-xl overflow-hidden border border-cream-200 bg-cream-100 group">
+              <motion.div 
+                key={idx} 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="relative w-32 h-40 rounded-xl overflow-hidden border border-cream-200 bg-cream-100 group"
+              >
                 <Image src={imgUrl} alt={`Upload ${idx}`} fill className="object-cover" />
                 {idx === 0 && (
-                  <span className="absolute top-2 left-2 bg-camel text-bark text-[9px] uppercase font-black px-1.5 py-0.5 rounded">
+                  <span className="absolute top-2 left-2 bg-camel text-bark text-[9px] uppercase font-black px-1.5 py-0.5 rounded shadow-sm">
                     Primary
                   </span>
                 )}
@@ -112,25 +159,31 @@ export default function NewProductPage() {
                 >
                   <Trash2 className="text-white" size={20} />
                 </button>
-              </div>
+              </motion.div>
             ))}
             
-            <CldUploadWidget 
-              uploadPreset="ml_default" // You may need to change this preset!
-              onSuccess={handleImageUpload}
-              options={{ multiple: true }}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              multiple
+              accept="image/*"
+              className="hidden"
+            />
+            
+            <button
+              type="button"
+              disabled={isUploading}
+              onClick={() => fileInputRef.current?.click()}
+              className={`w-32 h-40 border-2 border-dashed border-cream-300 hover:border-ink hover:bg-cream-100 rounded-xl flex flex-col items-center justify-center text-ink-muted hover:text-ink transition-all gap-2 ${isUploading ? "opacity-50 cursor-not-allowed" : ""}`}
             >
-              {({ open }) => (
-                <button
-                  type="button"
-                  onClick={() => open()}
-                  className="w-32 h-40 border-2 border-dashed border-cream-300 hover:border-ink hover:bg-cream-100 rounded-xl flex flex-col items-center justify-center text-ink-muted hover:text-ink transition-colors gap-2"
-                >
-                  <ImageIcon size={24} />
-                  <span className="text-xs font-semibold">Upload Image</span>
-                </button>
+              {isUploading ? (
+                <Loader2 size={24} className="animate-spin text-ink" />
+              ) : (
+                <ImageIcon size={24} />
               )}
-            </CldUploadWidget>
+              <span className="text-xs font-bold">{isUploading ? "Uploading..." : "Add Images"}</span>
+            </button>
           </div>
         </div>
 
@@ -184,13 +237,13 @@ export default function NewProductPage() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <label className="section-label">Sizes & Stock Tracker</label>
-            <button type="button" onClick={addSize} className="text-sm font-display font-semibold text-ink hover:text-camel transition-colors flex items-center gap-1.5 px-3 py-1.5 bg-cream-200 rounded-lg">
+            <button type="button" onClick={addSize} className="text-sm font-display font-semibold text-ink hover:text-camel transition-colors flex items-center gap-1.5 px-3 py-1.5 bg-cream-200 rounded-lg shadow-sm">
               <Plus size={14} /> Add Size
             </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {sizes.map((s, i) => (
-              <div key={i} className="flex gap-3 items-center bg-white p-3 rounded-xl border border-cream-200">
+              <div key={i} className="flex gap-3 items-center bg-white p-3 rounded-xl border border-cream-200 shadow-sm">
                 <select value={s.size} onChange={(e) => updateSize(i, "size", e.target.value)} className="input-field flex-1">
                   {SIZE_OPTIONS.map((sz) => <option key={sz} value={sz}>{sz}</option>)}
                 </select>
@@ -226,8 +279,13 @@ export default function NewProductPage() {
         <hr className="border-cream-200" />
 
         <div className="flex justify-end pt-2">
-          <motion.button whileTap={{ scale: 0.98 }} type="submit" className="btn-primary min-w-[200px] justify-center text-base py-3.5">
-            Publish Product
+          <motion.button 
+            whileTap={{ scale: 0.98 }} 
+            type="submit" 
+            disabled={isUploading}
+            className={`btn-primary min-w-[200px] justify-center text-base py-3.5 ${isUploading ? "opacity-70 cursor-not-allowed" : ""}`}
+          >
+            {isUploading ? "Waiting for uploads..." : "Publish Product"}
           </motion.button>
         </div>
 

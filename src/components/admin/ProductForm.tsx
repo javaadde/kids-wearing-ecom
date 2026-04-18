@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { X, Plus, Trash2 } from "lucide-react";
+import { useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, Plus, Trash2, Image as ImageIcon, Loader2 } from "lucide-react";
+import Image from "next/image";
 import { Product, SizeStock } from "@/types";
 
 interface Props {
@@ -16,6 +17,7 @@ const CATEGORIES = ["boys", "girls", "infants", "unisex"];
 const SEASONS = ["summer", "winter", "all"];
 
 export default function ProductForm({ product, onSave, onClose }: Props) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(product?.name || "");
   const [slug, setSlug] = useState(product?.slug || "");
   const [category, setCategory] = useState<string>(product?.category || "boys");
@@ -28,6 +30,10 @@ export default function ProductForm({ product, onSave, onClose }: Props) {
   const [sizes, setSizes] = useState<SizeStock[]>(
     product?.sizes || [{ size: "S", stock: 0 }]
   );
+  
+  // Image states
+  const [images, setImages] = useState<string[]>(product?.images || []);
+  const [isUploading, setIsUploading] = useState(false);
 
   const autoSlug = (val: string) =>
     val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -36,6 +42,42 @@ export default function ProductForm({ product, onSave, onClose }: Props) {
   const removeSize = (i: number) => setSizes(sizes.filter((_, idx) => idx !== i));
   const updateSize = (i: number, field: keyof SizeStock, value: string | number) =>
     setSizes(sizes.map((s, idx) => idx === i ? { ...s, [field]: field === "stock" ? Number(value) : value } : s));
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    const uploadedUrls: string[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          uploadedUrls.push(data.url);
+        }
+      } catch (error) {
+        console.error("Error uploading image:", error);
+      }
+    }
+
+    setImages((prev) => [...prev, ...uploadedUrls]);
+    setIsUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeImage = (idx: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +92,7 @@ export default function ProductForm({ product, onSave, onClose }: Props) {
       featured,
       newArrival,
       sizes,
-      images: product?.images || [],
+      images,
       tags: product?.tags || [],
     });
   };
@@ -80,7 +122,48 @@ export default function ProductForm({ product, onSave, onClose }: Props) {
         </div>
 
         {/* Form body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scroll px-6 py-6 space-y-5">
+        <form id="product-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scroll px-6 py-6 space-y-6">
+          
+          {/* Images Management */}
+          <div>
+            <label className="section-label block mb-3">Product Images</label>
+            <div className="flex flex-wrap gap-3">
+              <AnimatePresence>
+                {images.map((img, i) => (
+                  <motion.div 
+                    key={img} 
+                    initial={{ opacity: 0, scale: 0.8 }} 
+                    animate={{ opacity: 1, scale: 1 }} 
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="relative w-20 h-24 rounded-lg overflow-hidden border border-cream-200 bg-cream-100 group"
+                  >
+                    <Image src={img} alt="Product" fill className="object-cover" />
+                    <button 
+                      type="button" 
+                      onClick={() => removeImage(i)}
+                      className="absolute inset-0 bg-ink/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="text-white" size={14} />
+                    </button>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              
+              <input type="file" ref={fileInputRef} onChange={handleFileChange} multiple accept="image/*" className="hidden" />
+              <button
+                type="button"
+                disabled={isUploading}
+                onClick={() => fileInputRef.current?.click()}
+                className="w-20 h-24 border-2 border-dashed border-cream-300 hover:border-ink rounded-lg flex flex-col items-center justify-center text-ink-muted hover:text-ink transition-colors gap-1"
+              >
+                {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                <span className="text-[10px] font-bold">{isUploading ? "Uploading" : "Add"}</span>
+              </button>
+            </div>
+          </div>
+
+          <hr className="border-cream-200" />
+
           {/* Basic info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -174,7 +257,6 @@ export default function ProductForm({ product, onSave, onClose }: Props) {
                 </div>
               ))}
             </div>
-            <p className="text-xs text-ink-muted mt-2 font-medium">Stock = 0 marks the size as &quot;Out of Stock&quot; on storefront.</p>
           </div>
 
           {/* Toggles */}
@@ -206,10 +288,11 @@ export default function ProductForm({ product, onSave, onClose }: Props) {
           <motion.button
             whileTap={{ scale: 0.97 }}
             form="product-form"
-            onClick={handleSubmit as unknown as React.MouseEventHandler}
-            className="btn-primary flex-1 justify-center"
+            type="submit"
+            disabled={isUploading}
+            className={`btn-primary flex-1 justify-center ${isUploading ? "opacity-70 cursor-not-allowed" : ""}`}
           >
-            {product ? "Save Changes" : "Add Product"}
+            {isUploading ? "Uploading..." : (product ? "Save Changes" : "Add Product")}
           </motion.button>
         </div>
       </motion.div>
@@ -229,6 +312,13 @@ export default function ProductForm({ product, onSave, onClose }: Props) {
         }
         .input-field:focus {
           border-color: #1A1A1A;
+        }
+        .custom-scroll::-webkit-scrollbar {
+          width: 5px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+          background: #E0DDD4;
+          border-radius: 10px;
         }
       `}</style>
     </>

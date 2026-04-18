@@ -13,7 +13,14 @@ export async function GET(req: NextRequest) {
     if (searchParams.get("featured") === "true") query.featured = true;
     if (searchParams.get("newArrival") === "true") query.newArrival = true;
 
-    const products = await Product.find(query).sort({ createdAt: -1 }).lean();
+    const limit = parseInt(searchParams.get("limit") || "0");
+
+    let productsQuery = Product.find(query).sort({ createdAt: -1 });
+    if (limit > 0) {
+      productsQuery = productsQuery.limit(limit);
+    }
+
+    const products = await productsQuery.lean();
     return NextResponse.json({ products });
   } catch {
     return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });

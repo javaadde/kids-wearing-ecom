@@ -5,17 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSearchParams } from "next/navigation";
 import ProductCard from "@/components/store/ProductCard";
 import { Product } from "@/types";
-
-const MOCK_PRODUCTS: Product[] = [
-  { _id: "1", name: "Striped Cotton T-Shirt", slug: "1", category: "boys", season: "summer", price: 849, originalPrice: 1199, description: "", images: [], sizes: [{ size: "XS", stock: 5 }, { size: "S", stock: 10 }, { size: "M", stock: 0 }, { size: "L", stock: 0 }], featured: true, newArrival: true, tags: [], createdAt: "", updatedAt: "" },
-  { _id: "2", name: "Wide-Leg Denim Pants", slug: "2", category: "girls", season: "all", price: 1299, description: "", images: [], sizes: [{ size: "XS", stock: 2 }, { size: "S", stock: 8 }, { size: "M", stock: 6 }, { size: "L", stock: 4 }], featured: true, newArrival: false, tags: [], createdAt: "", updatedAt: "" },
-  { _id: "3", name: "Linen Bucket Hat", slug: "3", category: "unisex", season: "summer", price: 499, description: "", images: [], sizes: [{ size: "One Size", stock: 15 }], featured: true, newArrival: true, tags: [], createdAt: "", updatedAt: "" },
-  { _id: "4", name: "Puff Sleeve Blouse", slug: "4", category: "girls", season: "all", price: 999, originalPrice: 1399, description: "", images: [], sizes: [{ size: "XS", stock: 0 }, { size: "S", stock: 4 }, { size: "M", stock: 7 }, { size: "L", stock: 2 }], featured: true, newArrival: false, tags: [], createdAt: "", updatedAt: "" },
-  { _id: "5", name: "Cargo Joggers", slug: "5", category: "boys", season: "all", price: 1099, description: "", images: [], sizes: [{ size: "S", stock: 3 }, { size: "M", stock: 6 }, { size: "L", stock: 4 }], featured: false, newArrival: true, tags: [], createdAt: "", updatedAt: "" },
-  { _id: "6", name: "Denim Jacket", slug: "6", category: "boys", season: "all", price: 1899, description: "", images: [], sizes: [{ size: "XS", stock: 0 }, { size: "S", stock: 2 }, { size: "M", stock: 5 }], featured: false, newArrival: true, tags: [], createdAt: "", updatedAt: "" },
-  { _id: "7", name: "Floral Midi Dress", slug: "7", category: "girls", season: "summer", price: 1199, description: "", images: [], sizes: [{ size: "XS", stock: 4 }, { size: "S", stock: 1 }, { size: "M", stock: 0 }], featured: false, newArrival: false, tags: [], createdAt: "", updatedAt: "" },
-  { _id: "8", name: "Infant Romper Set", slug: "8", category: "infants", season: "summer", price: 749, description: "", images: [], sizes: [{ size: "3M", stock: 5 }, { size: "6M", stock: 8 }, { size: "12M", stock: 3 }], featured: false, newArrival: true, tags: [], createdAt: "", updatedAt: "" },
-];
+import { Loader2 } from "lucide-react";
 
 const CATEGORIES = ["all", "boys", "girls", "infants", "unisex"];
 const SORT_OPTIONS = [
@@ -26,32 +16,52 @@ const SORT_OPTIONS = [
 
 function ShopContent() {
   const searchParams = useSearchParams();
-  const [products] = useState<Product[]>(MOCK_PRODUCTS);
-  const [filtered, setFiltered] = useState<Product[]>(MOCK_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filtered, setFiltered] = useState<Product[]>([]);
   const [category, setCategory] = useState(searchParams.get("category") || "all");
   const [season, setSeason] = useState(searchParams.get("season") || "all");
   const [sort, setSort] = useState("newest");
 
   useEffect(() => {
+    setLoading(true);
+    fetch("/api/products")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.products) {
+          setProducts(data.products);
+          setFiltered(data.products);
+        }
+      })
+      .catch((err) => console.error("Shop fetch error:", err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (loading) return;
+
     let result = [...products];
     if (category !== "all") result = result.filter((p) => p.category === category);
     if (season !== "all") result = result.filter((p) => p.season === season || p.season === "all");
     if (searchParams.get("filter") === "newArrival") result = result.filter((p) => p.newArrival);
+    
     if (sort === "price_asc") result.sort((a, b) => a.price - b.price);
     if (sort === "price_desc") result.sort((a, b) => b.price - a.price);
+    if (sort === "newest") result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    
     setFiltered(result);
-  }, [category, season, sort, searchParams, products]);
+  }, [category, season, sort, searchParams, products, loading]);
 
   return (
     <div className="min-h-screen pt-20">
       {/* Page header */}
-      <div className="px-4 md:px-12 max-w-7xl mx-auto py-8 border-b border-cream-300">
+      <div className="px-4 md:px-12 max-w-7xl mx-auto py-8 border-b border-cream-300 transition-all">
         <motion.p
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           className="section-label mb-1"
         >
-          {filtered.length} Products
+          {loading ? "..." : `${filtered.length} Products`}
         </motion.p>
         <motion.h1
           initial={{ opacity: 0, y: 12 }}
@@ -72,23 +82,23 @@ function ShopContent() {
               key={cat}
               whileTap={{ scale: 0.95 }}
               onClick={() => setCategory(cat)}
-              className={`flex-shrink-0 px-4 py-2 rounded-full font-display font-semibold text-xs tracking-wide border transition-all ${
+              className={`flex-shrink-0 px-5 py-2.5 rounded-full font-display font-semibold text-[11px] tracking-widest uppercase border transition-all ${
                 category === cat
-                  ? "bg-ink text-cream-50 border-ink"
+                  ? "bg-ink text-cream-50 border-ink shadow-lg shadow-ink/10"
                   : "bg-transparent text-ink-muted border-cream-300 hover:border-ink"
               }`}
             >
-              {cat.charAt(0).toUpperCase() + cat.slice(1)}
+              {cat}
             </motion.button>
           ))}
 
-          <div className="w-px h-6 bg-cream-300 flex-shrink-0" />
+          <div className="w-px h-6 bg-cream-300 flex-shrink-0 mx-2" />
 
           {/* Sort */}
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
-            className="flex-shrink-0 px-3 py-2 rounded-full font-display font-semibold text-xs border border-cream-300 bg-transparent text-ink focus:outline-none focus:border-ink cursor-pointer"
+            className="flex-shrink-0 px-4 py-2.5 rounded-full font-display font-semibold text-[11px] tracking-widest uppercase border border-cream-300 bg-transparent text-ink focus:outline-none focus:border-ink cursor-pointer"
           >
             {SORT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
@@ -97,30 +107,38 @@ function ShopContent() {
         </div>
 
         {/* Product grid */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`${category}-${season}-${sort}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
-          >
-            {filtered.map((product, i) => (
-              <ProductCard key={product._id} product={product} index={i} />
-            ))}
-          </motion.div>
-        </AnimatePresence>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-32 gap-4">
+            <Loader2 className="animate-spin text-ink-faint" size={40} />
+            <p className="font-display font-bold text-ink-muted text-sm tracking-widest uppercase">Fetching Collection</p>
+          </div>
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`${category}-${season}-${sort}-${filtered.length}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
+              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8"
+            >
+              {filtered.map((product, i) => (
+                <ProductCard key={product._id} product={product} index={i} />
+              ))}
+            </motion.div>
+          </AnimatePresence>
+        )}
 
-        {filtered.length === 0 && (
+        {!loading && filtered.length === 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-20"
+            className="text-center py-32 bg-cream-50 rounded-3xl border border-dashed border-cream-200"
           >
-            <p className="font-display font-semibold text-ink-muted text-lg">No products found</p>
-            <button onClick={() => { setCategory("all"); setSeason("all"); }} className="btn-outline mt-6 mx-auto">
-              Clear Filters
+            <p className="font-display font-black text-ink text-xl">Nothing matches your selection</p>
+            <p className="text-ink-muted text-sm mt-2 max-w-xs mx-auto font-medium">Try clearing your filters or exploring a different category.</p>
+            <button onClick={() => { setCategory("all"); setSeason("all"); }} className="btn-primary mt-8 mx-auto px-8 py-3 text-xs">
+              View All Products
             </button>
           </motion.div>
         )}
@@ -133,8 +151,9 @@ export default function ShopPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen pt-20 flex items-center justify-center">
-          <p className="font-display font-medium text-ink-muted">Loading shop...</p>
+        <div className="min-h-screen pt-20 flex flex-col items-center justify-center gap-4">
+          <Loader2 className="animate-spin text-ink-faint" size={40} />
+          <p className="font-display font-bold text-ink-muted uppercase tracking-widest">Entering Kido Shop</p>
         </div>
       }
     >

@@ -5,103 +5,21 @@ import Link from "next/link";
 import ProductCard from "./ProductCard";
 import { Product } from "@/types";
 import { useEffect, useState } from "react";
-
-// Mock data for rendering without DB
-const MOCK_PRODUCTS: Product[] = [
-  {
-    _id: "1",
-    name: "Striped Cotton T-Shirt",
-    slug: "striped-cotton-tshirt",
-    category: "boys",
-    season: "summer",
-    price: 849,
-    originalPrice: 1199,
-    description: "Classic black-white striped tee. Breathable 100% cotton.",
-    images: ["/images/450f855752707484a911f523cd8d3123.jpg"],
-    sizes: [
-      { size: "XS", stock: 5 },
-      { size: "S", stock: 10 },
-      { size: "M", stock: 3 },
-      { size: "L", stock: 0 },
-    ],
-    featured: true,
-    newArrival: true,
-    tags: ["summer", "boys"],
-    createdAt: "",
-    updatedAt: "",
-  },
-  {
-    _id: "2",
-    name: "Wide-Leg Denim Pants",
-    slug: "wide-leg-denim-pants",
-    category: "girls",
-    season: "all",
-    price: 1299,
-    description: "Relaxed wide-leg denim in washed blue. Editorial cool.",
-    images: ["/images/51858d7e5b98b29701c266bd1e9dbc58.jpg"],
-    sizes: [
-      { size: "XS", stock: 2 },
-      { size: "S", stock: 8 },
-      { size: "M", stock: 6 },
-      { size: "L", stock: 4 },
-    ],
-    featured: true,
-    newArrival: false,
-    tags: ["girls", "denim"],
-    createdAt: "",
-    updatedAt: "",
-  },
-  {
-    _id: "3",
-    name: "Linen Bucket Hat",
-    slug: "linen-bucket-hat",
-    category: "unisex",
-    season: "summer",
-    price: 499,
-    description: "Sand-colored linen bucket hat. Blocks the sun in style.",
-    images: ["/images/000f2dca87b9d47c69fe17cce1c4fbde.jpg"],
-    sizes: [
-      { size: "One Size", stock: 15 },
-    ],
-    featured: true,
-    newArrival: true,
-    tags: ["accessories", "summer"],
-    createdAt: "",
-    updatedAt: "",
-  },
-  {
-    _id: "4",
-    name: "Puff Sleeve Blouse",
-    slug: "puff-sleeve-blouse",
-    category: "girls",
-    season: "all",
-    price: 999,
-    originalPrice: 1399,
-    description: "Ivory puff-sleeve blouse with peter pan collar.",
-    images: ["/images/a6d165aaa86f28d3f65d9aa0c5c2b3d1.jpg"],
-    sizes: [
-      { size: "XS", stock: 0 },
-      { size: "S", stock: 4 },
-      { size: "M", stock: 7 },
-      { size: "L", stock: 2 },
-    ],
-    featured: true,
-    newArrival: false,
-    tags: ["girls", "blouse"],
-    createdAt: "",
-    updatedAt: "",
-  },
-];
+import { Loader2 } from "lucide-react";
 
 export default function FeaturedProducts() {
-  const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // In production, fetch from API
   useEffect(() => {
+    setLoading(true);
     fetch("/api/products?featured=true")
       .then((r) => r.json())
-      .then((data) => { if (data?.products?.length) setProducts(data.products); })
-      .catch(() => {}); // fallback to mock
+      .then((data) => {
+        if (data?.products) setProducts(data.products);
+      })
+      .catch((err) => console.error("Error fetching featured products:", err))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
@@ -143,11 +61,22 @@ export default function FeaturedProducts() {
       </div>
 
       {/* Product grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-        {products.map((product, i) => (
-          <ProductCard key={product._id} product={product} index={i} />
-        ))}
-      </div>
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <Loader2 className="animate-spin text-ink-faint" size={32} />
+          <p className="text-sm font-medium text-ink-muted">Loading curated styles...</p>
+        </div>
+      ) : products.length > 0 ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+          {products.map((product, i) => (
+            <ProductCard key={product._id} product={product} index={i} />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-20 bg-cream-50 rounded-2xl border-2 border-dashed border-cream-200">
+          <p className="font-display font-semibold text-ink-muted">Our collection is refreshing. Check back soon!</p>
+        </div>
+      )}
     </section>
   );
 }
