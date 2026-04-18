@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSearchParams } from "next/navigation";
 import ProductCard from "@/components/store/ProductCard";
@@ -24,7 +24,7 @@ const SORT_OPTIONS = [
   { label: "Price: High to Low", value: "price_desc" },
 ];
 
-export default function ShopPage() {
+function ShopContent() {
   const searchParams = useSearchParams();
   const [products] = useState<Product[]>(MOCK_PRODUCTS);
   const [filtered, setFiltered] = useState<Product[]>(MOCK_PRODUCTS);
@@ -126,5 +126,19 @@ export default function ShopPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ShopPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen pt-20 flex items-center justify-center">
+          <p className="font-display font-medium text-ink-muted">Loading shop...</p>
+        </div>
+      }
+    >
+      <ShopContent />
+    </Suspense>
   );
 }
