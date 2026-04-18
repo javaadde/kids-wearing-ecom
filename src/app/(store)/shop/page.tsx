@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSearchParams } from "next/navigation";
+import ProductCard from "@/components/store/ProductCard";
 import { Product } from "@/types";
 
 const MOCK_PRODUCTS: Product[] = [

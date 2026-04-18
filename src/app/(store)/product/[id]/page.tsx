@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence, useMotionValue } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useParams } from "next/navigation";
 import { ShoppingBag, ChevronLeft, ChevronRight, Heart } from "lucide-react";
 import SizeSelector from "@/components/store/SizeSelector";
