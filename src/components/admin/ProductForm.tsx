@@ -18,8 +18,8 @@ const SEASONS = ["summer", "winter", "all"];
 export default function ProductForm({ product, onSave, onClose }: Props) {
   const [name, setName] = useState(product?.name || "");
   const [slug, setSlug] = useState(product?.slug || "");
-  const [category, setCategory] = useState(product?.category || "boys");
-  const [season, setSeason] = useState(product?.season || "all");
+  const [category, setCategory] = useState<string>(product?.category || "boys");
+  const [season, setSeason] = useState<string>(product?.season || "all");
   const [price, setPrice] = useState(String(product?.price || ""));
   const [originalPrice, setOriginalPrice] = useState(String(product?.originalPrice || ""));
   const [description, setDescription] = useState(product?.description || "");
