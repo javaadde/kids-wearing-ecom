@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { X, Plus, Trash2, ArrowLeft, Image as ImageIcon } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Image as ImageIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { CldUploadWidget } from "next-cloudinary";
 import Image from "next/image";
@@ -38,6 +38,7 @@ export default function NewProductPage() {
   const updateSize = (i: number, field: keyof SizeStock, value: string | number) =>
     setSizes(sizes.map((s, idx) => idx === i ? { ...s, [field]: field === "stock" ? Number(value) : value } : s));
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleImageUpload = (result: any) => {
     if (result.info && result.info.secure_url) {
       setImages((prev) => [...prev, result.info.secure_url]);

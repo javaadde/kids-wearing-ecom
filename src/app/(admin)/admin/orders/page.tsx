@@ -179,7 +179,7 @@ export default function AdminOrdersPage() {
 
       {filtered.length === 0 && (
         <div className="text-center py-16 text-ink-muted font-medium text-sm">
-          No orders with status "{filterStatus}"
+          No orders with status &quot;{filterStatus}&quot;
         </div>
       )}
     </div>

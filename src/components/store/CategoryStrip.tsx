@@ -2,8 +2,6 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { useRef } from "react";
-
 const categories = [
   { label: "All", href: "/shop", color: "bg-ink text-cream-50" },
   { label: "Boys", href: "/shop?category=boys", color: "bg-denim/20 text-denim" },

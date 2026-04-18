@@ -1,7 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
-
 const messages = [
   "Free Delivery Over ₹1499",
   "7-Day Easy Returns",

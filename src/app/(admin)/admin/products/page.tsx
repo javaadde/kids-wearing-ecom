@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
+import Link from "next/link";
 import { Plus, Pencil, Trash2, Search, X } from "lucide-react";
 import ProductForm from "@/components/admin/ProductForm";
 import { Product } from "@/types";

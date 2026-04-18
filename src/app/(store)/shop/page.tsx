@@ -2,11 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import ProductCard from "@/components/store/ProductCard";
 import { Product } from "@/types";
-import { SlidersHorizontal, X } from "lucide-react";
 
 const MOCK_PRODUCTS: Product[] = [
   { _id: "1", name: "Striped Cotton T-Shirt", slug: "1", category: "boys", season: "summer", price: 849, originalPrice: 1199, description: "", images: [], sizes: [{ size: "XS", stock: 5 }, { size: "S", stock: 10 }, { size: "M", stock: 0 }, { size: "L", stock: 0 }], featured: true, newArrival: true, tags: [], createdAt: "", updatedAt: "" },
@@ -20,7 +16,6 @@ const MOCK_PRODUCTS: Product[] = [
 ];
 
 const CATEGORIES = ["all", "boys", "girls", "infants", "unisex"];
-const SEASONS = ["all", "summer", "winter"];
 const SORT_OPTIONS = [
   { label: "Newest", value: "newest" },
   { label: "Price: Low to High", value: "price_asc" },
@@ -29,12 +24,11 @@ const SORT_OPTIONS = [
 
 export default function ShopPage() {
   const searchParams = useSearchParams();
-  const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
+  const [products] = useState<Product[]>(MOCK_PRODUCTS);
   const [filtered, setFiltered] = useState<Product[]>(MOCK_PRODUCTS);
   const [category, setCategory] = useState(searchParams.get("category") || "all");
   const [season, setSeason] = useState(searchParams.get("season") || "all");
   const [sort, setSort] = useState("newest");
-  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     let result = [...products];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { ReactNode } from "react";
 
@@ -23,7 +23,7 @@ export default function StatsCard({ label, value, prefix = "", icon, color, text
   useEffect(() => {
     const controls = animate(count, value, { duration: 1.8, delay, ease: "easeOut" });
     return controls.stop;
-  }, [value, delay]);
+  }, [value, delay, count]);
 
   return (
     <motion.div

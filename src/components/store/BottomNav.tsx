@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { useCartStore } from "@/store/cartStore";
 import { Home, ShoppingBag, Search, User } from "lucide-react";
 
 const navItems = [
@@ -15,7 +14,6 @@ const navItems = [
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const totalItems = useCartStore((s) => s.totalItems);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-cream-50/90 backdrop-blur-xl border-t border-cream-200 pb-[env(safe-area-inset-bottom)] md:hidden">

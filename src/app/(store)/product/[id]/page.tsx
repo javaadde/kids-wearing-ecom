@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 import { useParams } from "next/navigation";
-import Image from "next/image";
-import { ShoppingBag, ChevronLeft, ChevronRight, Share2, Heart } from "lucide-react";
+import { ShoppingBag, ChevronLeft, ChevronRight, Heart } from "lucide-react";
 import SizeSelector from "@/components/store/SizeSelector";
 import ProductCard from "@/components/store/ProductCard";
 import { useCartStore } from "@/store/cartStore";
@@ -53,8 +52,6 @@ export default function ProductDetailPage() {
   const [addState, setAddState] = useState<AddState>("idle");
   const [sizeError, setSizeError] = useState(false);
   const { addItem, openCart } = useCartStore();
-  const dragX = useMotionValue(0);
-
   useEffect(() => {
     fetch(`/api/products/${id}`)
       .then((r) => r.json())

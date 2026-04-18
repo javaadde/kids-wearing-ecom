@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { X, Plus, Trash2 } from "lucide-react";
 import { Product, SizeStock } from "@/types";
 
@@ -174,7 +174,7 @@ export default function ProductForm({ product, onSave, onClose }: Props) {
                 </div>
               ))}
             </div>
-            <p className="text-xs text-ink-muted mt-2 font-medium">Stock = 0 marks the size as "Out of Stock" on storefront.</p>
+            <p className="text-xs text-ink-muted mt-2 font-medium">Stock = 0 marks the size as &quot;Out of Stock&quot; on storefront.</p>
           </div>
 
           {/* Toggles */}

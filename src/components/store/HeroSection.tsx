@@ -4,8 +4,6 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-const words = ["KIDO", "STUDIO"];
-
 function AnimatedWord({ word, delay = 0 }: { word: string; delay?: number }) {
   return (
     <span className="inline-flex overflow-hidden">
