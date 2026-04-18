@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Trash2, Image as ImageIcon, Loader2 } from "lucide-react";
+import { X, Plus, Trash2, Image as ImageIcon, Loader2, Tags } from "lucide-react";
 import Image from "next/image";
 import { Product, SizeStock } from "@/types";
 
@@ -10,6 +10,11 @@ interface Props {
   product: Product | null;
   onSave: (data: Partial<Product>) => void;
   onClose: () => void;
+}
+
+interface CollectionItem {
+  _id: string;
+  name: string;
 }
 
 const SIZE_OPTIONS = ["XS", "S", "M", "L", "XL", "3M", "6M", "12M", "18M", "One Size"];
@@ -21,6 +26,7 @@ export default function ProductForm({ product, onSave, onClose }: Props) {
   const [name, setName] = useState(product?.name || "");
   const [slug, setSlug] = useState(product?.slug || "");
   const [category, setCategory] = useState<string>(product?.category || "boys");
+  const [collectionName, setCollectionName] = useState(product?.collectionName || "");
   const [season, setSeason] = useState<string>(product?.season || "all");
   const [price, setPrice] = useState(String(product?.price || ""));
   const [originalPrice, setOriginalPrice] = useState(String(product?.originalPrice || ""));
@@ -31,9 +37,77 @@ export default function ProductForm({ product, onSave, onClose }: Props) {
     product?.sizes || [{ size: "S", stock: 0 }]
   );
   
+  // Collections state
+  const [collections, setCollections] = useState<CollectionItem[]>([]);
+  const [isAddingCollection, setIsAddingCollection] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState("");
+  const [newCollectionBackgroundImage, setNewCollectionBackgroundImage] = useState("");
+  const [collectionLoading, setCollectionLoading] = useState(false);
+  const [isColUploading, setIsColUploading] = useState(false);
+  const [isColSaving, setIsColSaving] = useState(false);
+  const colFileRef = useRef<HTMLInputElement>(null);
+
   // Image states
   const [images, setImages] = useState<string[]>(product?.images || []);
   const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    fetchCollections();
+  }, [category]);
+
+  const fetchCollections = async () => {
+    try {
+      setCollectionLoading(true);
+      const res = await fetch(`/api/collections?category=${category}`, { cache: "no-store" });
+      const data = await res.json();
+      if (data.collections) setCollections(data.collections);
+    } catch (err) {
+      console.error("Error fetching collections:", err);
+    } finally {
+      setCollectionLoading(false);
+    }
+  };
+
+  const handleColImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsColUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        setNewCollectionBackgroundImage(data.url);
+      }
+    } finally {
+      setIsColUploading(false);
+    }
+  };
+
+  const handleAddCollection = async () => {
+    if (!newCollectionName.trim() || isColSaving) return;
+    setIsColSaving(true);
+    try {
+      const res = await fetch("/api/collections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newCollectionName, category, backgroundImage: newCollectionBackgroundImage }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCollections((prev) => [...prev, data.collection]);
+        setCollectionName(data.collection.name);
+        setIsAddingCollection(false);
+        setNewCollectionName("");
+        setNewCollectionBackgroundImage("");
+      }
+    } catch (err) {
+      alert("Failed to add collection");
+    } finally {
+      setIsColSaving(false);
+    }
+  };
 
   const autoSlug = (val: string) =>
     val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -85,6 +159,7 @@ export default function ProductForm({ product, onSave, onClose }: Props) {
       name,
       slug: slug || autoSlug(name),
       category: category as Product["category"],
+      collectionName,
       season: season as Product["season"],
       price: Number(price),
       originalPrice: originalPrice ? Number(originalPrice) : undefined,
@@ -187,12 +262,79 @@ export default function ProductForm({ product, onSave, onClose }: Props) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div>
               <label className="section-label block mb-1.5">Category *</label>
               <select value={category} onChange={(e) => setCategory(e.target.value)} className="input-field w-full">
                 {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
+            </div>
+            <div className="relative">
+              <label className="section-label block mb-1.5">Collection</label>
+              <AnimatePresence mode="wait">
+                {isAddingCollection ? (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-2 p-3 bg-cream-100 rounded-xl border border-cream-200">
+                    <div className="flex gap-1.5 flex-1">
+                      <div 
+                        className="relative w-10 h-10 bg-cream-200 rounded-lg overflow-hidden flex-shrink-0 border border-cream-300 cursor-pointer group/col"
+                        onClick={() => !isColUploading && colFileRef.current?.click()}
+                      >
+                        {newCollectionBackgroundImage ? (
+                          <>
+                            <Image src={newCollectionBackgroundImage} alt="Col" fill className="object-cover" />
+                            <div className="absolute inset-0 bg-ink/40 opacity-0 group-hover/col:opacity-100 flex items-center justify-center transition-opacity">
+                               <Plus size={12} className="text-white" />
+                            </div>
+                          </>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-ink-muted">
+                            {isColUploading ? <Loader2 size={14} className="animate-spin" /> : <ImageIcon size={14} />}
+                          </div>
+                        )}
+                        <input type="file" ref={colFileRef} onChange={handleColImageUpload} className="hidden" accept="image/*" />
+                      </div>
+                      <input 
+                        autoFocus
+                        value={newCollectionName}
+                        onChange={(e) => setNewCollectionName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCollection())}
+                        className="input-field flex-1 h-10"
+                        placeholder="Collection Name..."
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                       <button 
+                         type="button" 
+                         onClick={handleAddCollection} 
+                         disabled={isColUploading || isColSaving} 
+                         className="flex-1 h-8 bg-ink text-white rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1"
+                       >
+                         {isColSaving ? <Loader2 size={12} className="animate-spin" /> : <><Plus size={12}/> Create</>}
+                       </button>
+                       <button type="button" onClick={() => { setIsAddingCollection(false); setNewCollectionBackgroundImage(""); }} className="w-12 h-8 bg-cream-300 rounded-lg flex items-center justify-center text-ink flex-shrink-0"><X size={14}/></button>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative">
+                    <select 
+                      value={collectionName} 
+                      onChange={(e) => {
+                        if (e.target.value === "ADD_NEW") {
+                          setIsAddingCollection(true);
+                        } else {
+                          setCollectionName(e.target.value);
+                        }
+                      }} 
+                      className="input-field w-full pr-8 appearance-none"
+                    >
+                      <option value="">None</option>
+                      {collections.map((c) => <option key={c._id} value={c.name}>{c.name}</option>)}
+                      <option value="ADD_NEW" className="font-bold text-ink">+ Add New Collection</option>
+                    </select>
+                    <Tags size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
             <div>
               <label className="section-label block mb-1.5">Season *</label>

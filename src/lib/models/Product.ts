@@ -4,6 +4,7 @@ export interface IProduct extends Document {
   name: string;
   slug: string;
   category: string;
+  collectionName?: string;
   season: string;
   price: number;
   originalPrice?: number;
@@ -29,6 +30,7 @@ const ProductSchema = new Schema<IProduct>(
       required: true,
       enum: ["boys", "girls", "infants", "unisex"],
     },
+    collectionName: { type: String },
     season: {
       type: String,
       required: true,

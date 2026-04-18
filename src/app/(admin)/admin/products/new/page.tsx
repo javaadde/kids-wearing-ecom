@@ -1,12 +1,17 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { motion } from "framer-motion";
-import { Plus, Trash2, ArrowLeft, Image as ImageIcon, Loader2 } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Plus, Trash2, ArrowLeft, Image as ImageIcon, Loader2, Tags, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Product, SizeStock } from "@/types";
+
+interface CollectionItem {
+  _id: string;
+  name: string;
+}
 
 const SIZE_OPTIONS = ["XS", "S", "M", "L", "XL", "3M", "6M", "12M", "18M", "One Size"];
 const CATEGORIES = ["boys", "girls", "infants", "unisex"];
@@ -19,6 +24,7 @@ export default function NewProductPage() {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [category, setCategory] = useState("boys");
+  const [collectionName, setCollectionName] = useState("");
   const [season, setSeason] = useState("all");
   const [price, setPrice] = useState("");
   const [originalPrice, setOriginalPrice] = useState("");
@@ -27,9 +33,73 @@ export default function NewProductPage() {
   const [newArrival, setNewArrival] = useState(false);
   const [sizes, setSizes] = useState<SizeStock[]>([{ size: "S", stock: 0 }]);
   
+  // Collections state
+  const [collections, setCollections] = useState<CollectionItem[]>([]);
+  const [isAddingCollection, setIsAddingCollection] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState("");
+  const [newCollectionImage, setNewCollectionImage] = useState("");
+  const [collectionLoading, setCollectionLoading] = useState(false);
+  const [isColUploading, setIsColUploading] = useState(false);
+  const colFileRef = useRef<HTMLInputElement>(null);
+
   // Image Upload state
   const [images, setImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    fetchCollections();
+  }, [category]);
+
+  const fetchCollections = async () => {
+    try {
+      setCollectionLoading(true);
+      const res = await fetch(`/api/collections?category=${category}`);
+      const data = await res.json();
+      if (data.collections) setCollections(data.collections);
+    } catch (err) {
+      console.error("Error fetching collections:", err);
+    } finally {
+      setCollectionLoading(false);
+    }
+  };
+
+  const handleColImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsColUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        setNewCollectionImage(data.url);
+      }
+    } finally {
+      setIsColUploading(false);
+    }
+  };
+
+  const handleAddCollection = async () => {
+    if (!newCollectionName.trim()) return;
+    try {
+      const res = await fetch("/api/collections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newCollectionName, category, image: newCollectionImage }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCollections((prev) => [...prev, data.collection]);
+        setCollectionName(data.collection.name);
+        setIsAddingCollection(false);
+        setNewCollectionName("");
+        setNewCollectionImage("");
+      }
+    } catch (err) {
+      alert("Failed to add collection");
+    }
+  };
 
   const autoSlug = (val: string) =>
     val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -89,6 +159,7 @@ export default function NewProductPage() {
       name,
       slug: slug || autoSlug(name),
       category: category as Product["category"],
+      collectionName,
       season: season as Product["season"],
       price: Number(price),
       originalPrice: originalPrice ? Number(originalPrice) : undefined,
@@ -208,11 +279,59 @@ export default function NewProductPage() {
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
-          <div className="col-span-2 lg:col-span-1">
-            <label className="section-label block mb-2">Season *</label>
-            <select value={season} onChange={(e) => setSeason(e.target.value)} className="input-field w-full">
-              {SEASONS.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+          <div className="col-span-2 lg:col-span-1 relative">
+            <label className="section-label block mb-2">Collection</label>
+            <AnimatePresence mode="wait">
+              {isAddingCollection ? (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-2 p-3 bg-white rounded-xl border border-cream-200 shadow-sm min-w-[220px] absolute z-10 top-0 left-0 right-0 lg:left-0 lg:right-auto">
+                  <div className="flex gap-1.5 flex-1">
+                    <div className="relative w-10 h-10 bg-cream-50 rounded-lg overflow-hidden flex-shrink-0 border border-cream-200">
+                      {newCollectionImage ? (
+                        <Image src={newCollectionImage} alt="Col" fill className="object-cover" />
+                      ) : (
+                        <button type="button" onClick={() => colFileRef.current?.click()} className="w-full h-full flex items-center justify-center text-ink-muted">
+                          {isColUploading ? <Loader2 size={14} className="animate-spin" /> : <ImageIcon size={14} />}
+                        </button>
+                      )}
+                      <input type="file" ref={colFileRef} onChange={handleColImageUpload} className="hidden" accept="image/*" />
+                    </div>
+                    <input 
+                      autoFocus
+                      value={newCollectionName}
+                      onChange={(e) => setNewCollectionName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCollection())}
+                      className="input-field flex-1 h-10"
+                      placeholder="Name..."
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                     <button type="button" onClick={handleAddCollection} disabled={isColUploading} className="flex-1 h-8 bg-ink text-white rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1">
+                       <Plus size={12}/> Create
+                     </button>
+                     <button type="button" onClick={() => { setIsAddingCollection(false); setNewCollectionImage(""); }} className="w-12 h-8 bg-cream-200 rounded-lg flex items-center justify-center text-ink flex-shrink-0"><X size={14}/></button>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative">
+                  <select 
+                    value={collectionName} 
+                    onChange={(e) => {
+                      if (e.target.value === "ADD_NEW") {
+                        setIsAddingCollection(true);
+                      } else {
+                        setCollectionName(e.target.value);
+                      }
+                    }} 
+                    className="input-field w-full appearance-none pr-10"
+                  >
+                    <option value="">None</option>
+                    {collections.map((c) => <option key={c._id} value={c.name}>{c.name}</option>)}
+                    <option value="ADD_NEW" className="font-bold">+ Add New</option>
+                  </select>
+                  <Tags size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
           <div className="col-span-1 border-l pl-4 border-cream-200">
             <label className="section-label block mb-2">Price (₹) *</label>
@@ -224,11 +343,17 @@ export default function NewProductPage() {
           </div>
         </div>
 
-        <hr className="border-cream-200" />
-
-        <div>
-          <label className="section-label block mb-2">Description *</label>
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} required rows={4} className="input-field w-full resize-none leading-relaxed" placeholder="Detailed product description..." />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="md:col-span-1">
+            <label className="section-label block mb-2">Season *</label>
+            <select value={season} onChange={(e) => setSeason(e.target.value)} className="input-field w-full">
+              {SEASONS.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div className="md:col-span-3">
+             <label className="section-label block mb-2">Description *</label>
+             <textarea value={description} onChange={(e) => setDescription(e.target.value)} required rows={1} className="input-field w-full resize-none leading-relaxed" placeholder="Detailed product description..." />
+          </div>
         </div>
 
         <hr className="border-cream-200" />

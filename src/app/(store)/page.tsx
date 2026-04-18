@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import HeroSection from "@/components/store/HeroSection";
 import CategoryStrip from "@/components/store/CategoryStrip";
 import FeaturedProducts from "@/components/store/FeaturedProducts";
+import CollectionShowcase from "@/components/store/CollectionShowcase";
 import NewArrivalsBanner from "@/components/store/NewArrivalsBanner";
 import TrustMarquee from "@/components/store/TrustMarquee";
 import FooterStore from "@/components/store/FooterStore";
@@ -18,6 +19,7 @@ export default function HomePage() {
       <HeroSection />
       <CategoryStrip />
       <FeaturedProducts />
+      <CollectionShowcase />
       <NewArrivalsBanner />
       <TrustMarquee />
       <FooterStore />

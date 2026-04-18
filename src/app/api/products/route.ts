@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
     const query: Record<string, unknown> = {};
 
     if (searchParams.get("category")) query.category = searchParams.get("category");
+    if (searchParams.get("collection")) query.collectionName = searchParams.get("collection");
     if (searchParams.get("season")) query.season = searchParams.get("season");
     if (searchParams.get("featured") === "true") query.featured = true;
     if (searchParams.get("newArrival") === "true") query.newArrival = true;

@@ -10,6 +10,7 @@ import {
   LogOut,
   X,
   Menu,
+  Tags,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useState } from "react";
@@ -17,6 +18,7 @@ import { useState } from "react";
 const navItems = [
   { href: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/admin/products", icon: ShoppingBag, label: "Products" },
+  { href: "/admin/collections", icon: Tags, label: "Collections" },
   { href: "/admin/orders", icon: Package, label: "Orders" },
 ];
 

@@ -20,8 +20,10 @@ function ShopContent() {
   const [loading, setLoading] = useState(true);
   const [filtered, setFiltered] = useState<Product[]>([]);
   const [category, setCategory] = useState(searchParams.get("category") || "all");
+  const [collection, setCollection] = useState(searchParams.get("collection") || "all");
   const [season, setSeason] = useState(searchParams.get("season") || "all");
   const [sort, setSort] = useState("newest");
+  const [collections, setCollections] = useState<{_id: string, name: string}[]>([]);
 
   useEffect(() => {
     setLoading(true);
@@ -38,10 +40,24 @@ function ShopContent() {
   }, []);
 
   useEffect(() => {
+    if (category === "all") {
+      setCollections([]);
+      setCollection("all");
+      return;
+    }
+    fetch(`/api/collections?category=${category}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.collections) setCollections(data.collections);
+      });
+  }, [category]);
+
+  useEffect(() => {
     if (loading) return;
 
     let result = [...products];
     if (category !== "all") result = result.filter((p) => p.category === category);
+    if (collection !== "all") result = result.filter((p) => p.collectionName === collection);
     if (season !== "all") result = result.filter((p) => p.season === season || p.season === "all");
     if (searchParams.get("filter") === "newArrival") result = result.filter((p) => p.newArrival);
     
@@ -50,7 +66,7 @@ function ShopContent() {
     if (sort === "newest") result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     
     setFiltered(result);
-  }, [category, season, sort, searchParams, products, loading]);
+  }, [category, collection, season, sort, searchParams, products, loading]);
 
   return (
     <div className="min-h-screen pt-20">
@@ -74,14 +90,14 @@ function ShopContent() {
       </div>
 
       <div className="px-4 md:px-12 max-w-7xl mx-auto py-6">
-        {/* Filter bar */}
+        {/* Main Filter bar */}
         <div className="flex items-center gap-3 mb-6 overflow-x-auto no-scrollbar pb-1">
           {/* Category pills */}
           {CATEGORIES.map((cat) => (
             <motion.button
               key={cat}
               whileTap={{ scale: 0.95 }}
-              onClick={() => setCategory(cat)}
+              onClick={() => { setCategory(cat); setCollection("all"); }}
               className={`flex-shrink-0 px-5 py-2.5 rounded-full font-display font-semibold text-[11px] tracking-widest uppercase border transition-all ${
                 category === cat
                   ? "bg-ink text-cream-50 border-ink shadow-lg shadow-ink/10"
@@ -106,6 +122,38 @@ function ShopContent() {
           </select>
         </div>
 
+        {/* Collections sub-filter */}
+        {collections.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }} 
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-4 mb-8 overflow-x-auto no-scrollbar py-2"
+          >
+            <span className="text-[10px] font-black uppercase tracking-widest text-ink/40 flex-shrink-0">Filter by Collection:</span>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setCollection("all")}
+                className={`flex-shrink-0 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all border ${
+                  collection === "all" ? "bg-camel text-bark border-camel" : "bg-white text-ink-muted border-cream-200"
+                }`}
+              >
+                All {category}
+              </button>
+              {collections.map((col) => (
+                <button 
+                  key={col._id}
+                  onClick={() => setCollection(col.name)}
+                  className={`flex-shrink-0 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all border ${
+                    collection === col.name ? "bg-camel text-bark border-camel" : "bg-white text-ink-muted border-cream-200"
+                  }`}
+                >
+                  {col.name}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
         {/* Product grid */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-32 gap-4">
@@ -115,10 +163,10 @@ function ShopContent() {
         ) : (
           <AnimatePresence mode="wait">
             <motion.div
-              key={`${category}-${season}-${sort}-${filtered.length}`}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
+              key={`${category}-${collection}-${sort}-${filtered.length}`}
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.3 }}
               className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8"
             >
@@ -136,9 +184,9 @@ function ShopContent() {
             className="text-center py-32 bg-cream-50 rounded-3xl border border-dashed border-cream-200"
           >
             <p className="font-display font-black text-ink text-xl">Nothing matches your selection</p>
-            <p className="text-ink-muted text-sm mt-2 max-w-xs mx-auto font-medium">Try clearing your filters or exploring a different category.</p>
-            <button onClick={() => { setCategory("all"); setSeason("all"); }} className="btn-primary mt-8 mx-auto px-8 py-3 text-xs">
-              View All Products
+            <p className="text-ink-muted text-sm mt-2 max-w-xs mx-auto font-medium">Try clearing your filters or exploring a different collection.</p>
+            <button onClick={() => { setCategory("all"); setCollection("all"); setSeason("all"); }} className="btn-primary mt-8 mx-auto px-8 py-3 text-xs">
+              Clear All Filters
             </button>
           </motion.div>
         )}
