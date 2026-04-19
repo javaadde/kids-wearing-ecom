@@ -1,39 +1,56 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   ShoppingBag,
   Package,
-  TrendingUp,
   AlertTriangle,
+  MessageCircle,
+  ExternalLink,
 } from "lucide-react";
 import StatsCard from "@/components/admin/StatsCard";
 import Link from "next/link";
 
-const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-800",
-  processing: "bg-blue-100 text-blue-800",
-  shipped: "bg-purple-100 text-purple-800",
-  delivered: "bg-green-100 text-green-800",
-  cancelled: "bg-red-100 text-red-800",
-};
+interface DashboardStats {
+  totalProducts: number;
+  lowStock: number;
+}
 
 export default function AdminDashboardPage() {
-  const [stats] = useState({
-    totalOrders: 142,
-    revenue: 187540,
-    products: 87,
-    lowStock: 5,
+  const [stats, setStats] = useState<DashboardStats>({
+    totalProducts: 0,
+    lowStock: 0,
   });
+  const [loading, setLoading] = useState(true);
 
-  const recentOrders = [
-    { id: "ORD001", customer: "Priya S.", total: 2498, status: "pending", date: "Today" },
-    { id: "ORD002", customer: "Rahul M.", total: 1299, status: "shipped", date: "Yesterday" },
-    { id: "ORD003", customer: "Ananya K.", total: 3798, status: "delivered", date: "Apr 14" },
-    { id: "ORD004", customer: "Vikram P.", total: 849, status: "processing", date: "Apr 13" },
-    { id: "ORD005", customer: "Sneha R.", total: 2199, status: "cancelled", date: "Apr 12" },
-  ];
+  const fetchStats = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/products");
+      const data = await res.json();
+      const products = data.products || [];
+
+      // Calculate low stock (products where any size has stock <= 5)
+      const lowStockCount = products.filter(
+        (p: { sizes: { stock: number }[] }) =>
+          p.sizes?.some((s: { stock: number }) => s.stock <= 5)
+      ).length;
+
+      setStats({
+        totalProducts: products.length,
+        lowStock: lowStockCount,
+      });
+    } catch (error) {
+      console.error("Failed to fetch stats:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   return (
     <div className="max-w-6xl mx-auto pt-14 md:pt-0">
@@ -47,115 +64,121 @@ export default function AdminDashboardPage() {
       </motion.div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         <StatsCard
-          label="Total Orders"
-          value={stats.totalOrders}
-          icon={<Package size={20} />}
+          label="Products"
+          value={loading ? 0 : stats.totalProducts}
+          icon={<ShoppingBag size={20} />}
           color="bg-ink"
           textColor="text-cream-50"
           delay={0}
         />
         <StatsCard
-          label="Revenue"
-          value={stats.revenue}
-          prefix="₹"
-          icon={<TrendingUp size={20} />}
-          color="bg-camel"
-          textColor="text-ink"
-          delay={0.1}
-        />
-        <StatsCard
-          label="Products"
-          value={stats.products}
-          icon={<ShoppingBag size={20} />}
-          color="bg-cream-50"
-          textColor="text-ink"
-          delay={0.2}
-        />
-        <StatsCard
           label="Low Stock"
-          value={stats.lowStock}
+          value={loading ? 0 : stats.lowStock}
           icon={<AlertTriangle size={20} />}
           color="bg-rust"
           textColor="text-white"
-          delay={0.3}
+          delay={0.1}
         />
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="bg-green-500 text-white rounded-2xl p-5 space-y-3 col-span-2 lg:col-span-1"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-display font-semibold tracking-widest uppercase opacity-70">
+              Orders
+            </p>
+            <div className="opacity-60">
+              <MessageCircle size={20} />
+            </div>
+          </div>
+          <p className="font-display font-black text-lg leading-none">Via WhatsApp</p>
+        </motion.div>
       </div>
 
-      {/* Recent Orders */}
+      {/* WhatsApp Orders Info */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.5 }}
         className="bg-cream-50 rounded-2xl border border-cream-300 overflow-hidden"
       >
-        <div className="flex items-center justify-between px-6 py-5 border-b border-cream-300">
-          <h2 className="font-display font-black text-base">Recent Orders</h2>
-          <Link href="/admin/orders" className="text-xs font-display font-semibold text-ink-muted hover:text-ink transition-colors uppercase tracking-wide">
-            View All →
-          </Link>
+        <div className="px-6 py-5 border-b border-cream-300">
+          <h2 className="font-display font-black text-base flex items-center gap-2">
+            <MessageCircle size={16} className="text-green-500" />
+            Order Management
+          </h2>
         </div>
 
-        {/* Desktop table */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-cream-200">
-                {["Order", "Customer", "Total", "Status", "Date"].map((h) => (
-                  <th key={h} className="px-6 py-3 text-left text-[10px] font-display font-black tracking-widest uppercase text-ink-muted">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {recentOrders.map((order, i) => (
-                <motion.tr
-                  key={order.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.35 + i * 0.05 }}
-                  className="border-b border-cream-200 last:border-0 hover:bg-cream-100 transition-colors"
-                >
-                  <td className="px-6 py-4 font-display font-bold text-sm text-ink">{order.id}</td>
-                  <td className="px-6 py-4 text-sm font-medium text-ink">{order.customer}</td>
-                  <td className="px-6 py-4 font-display font-black text-sm">₹{order.total.toLocaleString()}</td>
-                  <td className="px-6 py-4">
-                    <span className={`text-[10px] font-display font-bold tracking-wide uppercase px-2.5 py-1 rounded-full ${STATUS_COLORS[order.status]}`}>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-ink-muted font-medium">{order.date}</td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <div className="px-6 py-8 flex flex-col items-center text-center space-y-6">
+          {/* WhatsApp icon */}
+          <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center">
+            <MessageCircle size={36} className="text-green-500" />
+          </div>
 
-        {/* Mobile card view */}
-        <div className="md:hidden divide-y divide-cream-200">
-          {recentOrders.map((order, i) => (
-            <motion.div
-              key={order.id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.35 + i * 0.05 }}
-              className="px-5 py-4 flex items-center justify-between"
-            >
-              <div>
-                <p className="font-display font-bold text-sm text-ink">{order.id}</p>
-                <p className="text-xs text-ink-muted mt-0.5 font-medium">{order.customer} · {order.date}</p>
-              </div>
-              <div className="text-right">
-                <p className="font-display font-black text-sm">₹{order.total.toLocaleString()}</p>
-                <span className={`text-[10px] font-display font-bold tracking-wide uppercase px-2 py-0.5 rounded-full mt-1 inline-block ${STATUS_COLORS[order.status]}`}>
-                  {order.status}
-                </span>
-              </div>
-            </motion.div>
-          ))}
+          <div className="space-y-2 max-w-md">
+            <h3 className="font-display font-black text-lg text-ink">
+              Orders arrive via WhatsApp
+            </h3>
+            <p className="text-sm text-ink-muted font-medium leading-relaxed">
+              Customers place orders directly through WhatsApp. All order details including item info, sizes, quantities, and delivery addresses are sent to your WhatsApp number.
+            </p>
+          </div>
+
+          <div className="bg-cream-100 border border-cream-200 rounded-2xl px-6 py-4 space-y-1">
+            <p className="text-[10px] font-black uppercase tracking-widest text-ink-faint">
+              WhatsApp Number
+            </p>
+            <p className="font-display font-black text-lg text-ink">+91 7593073393</p>
+          </div>
+
+          <a
+            href="https://wa.me/917593073393"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-xl font-display font-bold text-sm transition-colors shadow-lg shadow-green-500/20"
+          >
+            Open WhatsApp
+            <ExternalLink size={14} />
+          </a>
         </div>
+      </motion.div>
+
+      {/* Quick Links */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4, duration: 0.5 }}
+        className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6"
+      >
+        <Link
+          href="/admin/products"
+          className="flex items-center gap-4 bg-cream-50 border border-cream-300 rounded-2xl p-5 hover:border-ink transition-colors group"
+        >
+          <div className="w-12 h-12 bg-cream-200 rounded-xl flex items-center justify-center group-hover:bg-ink group-hover:text-cream-50 transition-colors">
+            <Package size={20} />
+          </div>
+          <div>
+            <p className="font-display font-bold text-sm text-ink">Manage Products</p>
+            <p className="text-xs text-ink-muted mt-0.5">Add, edit, or remove products</p>
+          </div>
+        </Link>
+
+        <Link
+          href="/admin/collections"
+          className="flex items-center gap-4 bg-cream-50 border border-cream-300 rounded-2xl p-5 hover:border-ink transition-colors group"
+        >
+          <div className="w-12 h-12 bg-cream-200 rounded-xl flex items-center justify-center group-hover:bg-ink group-hover:text-cream-50 transition-colors">
+            <ShoppingBag size={20} />
+          </div>
+          <div>
+            <p className="font-display font-bold text-sm text-ink">Manage Collections</p>
+            <p className="text-xs text-ink-muted mt-0.5">Organize your product collections</p>
+          </div>
+        </Link>
       </motion.div>
     </div>
   );

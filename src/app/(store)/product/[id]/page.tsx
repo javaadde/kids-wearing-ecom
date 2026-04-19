@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParams, useRouter } from "next/navigation";
-import { ShoppingBag, ChevronLeft, ChevronRight, Heart, Loader2, ImageIcon } from "lucide-react";
+import { ShoppingBag, ChevronLeft, ChevronRight, Heart, Loader2, ImageIcon, MessageCircle, Plus, Minus } from "lucide-react";
 import Image from "next/image";
 import SizeSelector from "@/components/store/SizeSelector";
 import ProductCard from "@/components/store/ProductCard";
+import WhatsAppOrderModal from "@/components/store/WhatsAppOrderModal";
 import { useCartStore } from "@/store/cartStore";
 import { Product } from "@/types";
 import Link from "next/link";
@@ -23,6 +24,8 @@ export default function ProductDetailPage() {
   const [currentImg, setCurrentImg] = useState(0);
   const [addState, setAddState] = useState<AddState>("idle");
   const [sizeError, setSizeError] = useState(false);
+  const [quantity, setQuantity] = useState(1);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   
   const { addItem, openCart } = useCartStore();
 
@@ -73,12 +76,18 @@ export default function ProductDetailPage() {
       price: product.price,
       image: product.images[0] || "",
       size: selectedSize,
-      quantity: 1,
+      quantity: quantity,
     });
     setTimeout(() => {
       setAddState("done");
       setTimeout(() => { setAddState("idle"); openCart(); }, 800);
     }, 600);
+  };
+
+  const handleBuyViaWhatsApp = () => {
+    if (!selectedSize) { setSizeError(true); return; }
+    setSizeError(false);
+    setShowWhatsAppModal(true);
   };
 
   const discount = product.originalPrice
@@ -245,42 +254,82 @@ export default function ProductDetailPage() {
               </AnimatePresence>
             </div>
 
-            {/* Add to cart */}
-            <div className="flex gap-4 pt-6">
+            {/* Quantity Selector */}
+            <div className="space-y-3">
+              <p className="section-label">Quantity</p>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 bg-cream-100 border border-cream-300 rounded-2xl px-4 py-2.5">
+                  <motion.button
+                    whileTap={{ scale: 0.85 }}
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="w-8 h-8 flex items-center justify-center rounded-xl bg-cream-200 hover:bg-cream-300 transition-colors"
+                  >
+                    <Minus size={14} />
+                  </motion.button>
+                  <span className="text-base font-display font-black w-8 text-center">{quantity}</span>
+                  <motion.button
+                    whileTap={{ scale: 0.85 }}
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="w-8 h-8 flex items-center justify-center rounded-xl bg-cream-200 hover:bg-cream-300 transition-colors"
+                  >
+                    <Plus size={14} />
+                  </motion.button>
+                </div>
+                <span className="text-xs text-ink-muted font-medium">
+                  Total: <span className="font-black text-ink">₹{(product.price * quantity).toLocaleString()}</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="space-y-3 pt-2">
+              {/* Buy via WhatsApp - Primary */}
               <motion.button
                 whileTap={{ scale: 0.98 }}
-                onClick={handleAddToCart}
-                disabled={addState !== "idle"}
-                className={`flex-1 h-16 rounded-2xl font-display font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 ${
-                  addState === "done" 
-                    ? "bg-green-700 text-white" 
-                    : "bg-ink text-cream-50 hover:bg-ink-light"
-                }`}
+                onClick={handleBuyViaWhatsApp}
+                className="w-full h-16 rounded-2xl font-display font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/25"
               >
-                <AnimatePresence mode="wait">
-                  {addState === "idle" && (
-                    <motion.span key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3">
-                      <ShoppingBag size={18} /> Add to Bag
-                    </motion.span>
-                  )}
-                  {addState === "adding" && (
-                    <motion.div key="adding" animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full" />
-                  )}
-                  {addState === "done" && (
-                    <motion.span key="done" initial={{ scale: 0.8 }} animate={{ scale: 1 }}>
-                      Successfully Added
-                    </motion.span>
-                  )}
-                </AnimatePresence>
+                <MessageCircle size={18} />
+                Order via WhatsApp
               </motion.button>
 
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                className="w-16 h-16 flex items-center justify-center border border-cream-300 rounded-2xl hover:bg-cream-100 transition-colors"
-                aria-label="Wishlist"
-              >
-                <Heart size={20} strokeWidth={1.5} />
-              </motion.button>
+              {/* Add to Cart */}
+              <div className="flex gap-3">
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleAddToCart}
+                  disabled={addState !== "idle"}
+                  className={`flex-1 h-14 rounded-2xl font-display font-black text-[10px] uppercase tracking-[0.15em] transition-all flex items-center justify-center gap-2.5 border ${
+                    addState === "done" 
+                      ? "bg-green-700 text-white border-green-700" 
+                      : "bg-cream-50 text-ink border-cream-300 hover:border-ink hover:bg-cream-100"
+                  }`}
+                >
+                  <AnimatePresence mode="wait">
+                    {addState === "idle" && (
+                      <motion.span key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2.5">
+                        <ShoppingBag size={15} /> Add to Bag
+                      </motion.span>
+                    )}
+                    {addState === "adding" && (
+                      <motion.div key="adding" animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="w-4 h-4 border-2 border-ink/20 border-t-ink rounded-full" />
+                    )}
+                    {addState === "done" && (
+                      <motion.span key="done" initial={{ scale: 0.8 }} animate={{ scale: 1 }}>
+                        Added ✓
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
+
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  className="w-14 h-14 flex items-center justify-center border border-cream-300 rounded-2xl hover:bg-cream-100 transition-colors"
+                  aria-label="Wishlist"
+                >
+                  <Heart size={18} strokeWidth={1.5} />
+                </motion.button>
+              </div>
             </div>
           </div>
 
@@ -320,6 +369,23 @@ export default function ProductDetailPage() {
           </div>
         </div>
       )}
+
+      {/* WhatsApp Order Modal */}
+      <WhatsAppOrderModal
+        isOpen={showWhatsAppModal}
+        onClose={() => setShowWhatsAppModal(false)}
+        items={[
+          {
+            name: product.name,
+            price: product.price,
+            image: product.images[0] || "",
+            size: selectedSize || "",
+            quantity: quantity,
+            category: product.category,
+          },
+        ]}
+        totalPrice={product.price * quantity}
+      />
     </div>
   );
 }
