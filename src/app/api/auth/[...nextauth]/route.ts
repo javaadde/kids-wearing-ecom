@@ -56,6 +56,7 @@ const authOptions: NextAuthOptions = {
     },
   },
   secret: process.env.NEXTAUTH_SECRET || "kido-secret-change-me",
+  trustHost: true,
 };
 
 const handler = NextAuth(authOptions);
