@@ -1,8 +1,14 @@
-import NextAuth, { type NextAuthOptions } from "next-auth";
+import NextAuth, { type NextAuthOptions, type User } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import connectDB from "@/lib/db";
 import Admin from "@/lib/models/Admin";
 import bcrypt from "bcryptjs";
+
+// Extend the default session and user types
+interface ExtendedUser extends User {
+  role?: string;
+  id?: string;
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -34,22 +40,24 @@ export const authOptions: NextAuthOptions = {
           name: admin.name,
           email: admin.email,
           role: admin.role,
-        };
+        } as ExtendedUser;
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = (user as any).role;
-        token.id = user.id;
+        const extendedUser = user as ExtendedUser;
+        token.role = extendedUser.role;
+        token.id = extendedUser.id;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).role = token.role;
-        (session.user as any).id = token.id;
+        const sessionUser = session.user as ExtendedUser;
+        sessionUser.role = token.role as string;
+        sessionUser.id = token.id as string;
       }
       return session;
     },
