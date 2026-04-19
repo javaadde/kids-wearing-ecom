@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, UserPlus, ShieldPlus } from "lucide-react";
@@ -16,13 +16,11 @@ export default function AdminRegisterPage() {
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Check if we actually need setup
     fetch("/api/admin/register")
       .then((res) => res.json())
       .then((data) => {
         setNeedsSetup(data.needsSetup);
         if (data.needsSetup === false) {
-          // If setup already done, redirect to login
           router.push("/admin/login");
         }
       })
@@ -47,16 +45,21 @@ export default function AdminRegisterPage() {
         throw new Error(data.message || "Registration failed");
       }
 
-      // Success! Redirect to login
       router.push("/admin/login?setup=success");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unknown error occurred");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  if (needsSetup === null) return null;
+  if (needsSetup === null) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-ink flex items-center justify-center px-4">
@@ -66,7 +69,6 @@ export default function AdminRegisterPage() {
         className="w-full max-w-md"
       >
         <div className="bg-cream-50/5 border border-cream-50/10 rounded-3xl p-8 md:p-10 backdrop-blur-xl">
-          {/* Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-camel/20 rounded-2xl mb-4 text-camel">
               <ShieldPlus size={32} />
@@ -144,7 +146,9 @@ export default function AdminRegisterPage() {
               {loading ? (
                 <div className="w-5 h-5 border-2 border-ink/30 border-t-ink rounded-full animate-spin" />
               ) : (
-                <><UserPlus size={18} /> Create Admin Account</>
+                <React.Fragment>
+                  <UserPlus size={18} /> Create Admin Account
+                </React.Fragment>
               )}
             </motion.button>
           </form>
@@ -153,7 +157,7 @@ export default function AdminRegisterPage() {
             Security Notice: This page will be disabled automatically after the first admin is created.
           </p>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
