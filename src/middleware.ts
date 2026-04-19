@@ -8,5 +8,12 @@ export default withAuth({
 });
 
 export const config = {
-  matcher: ["/admin/((?!login|register).*)"],
+  matcher: [
+    "/admin/dashboard/:path*",
+    "/admin/products/:path*",
+    "/admin/collections/:path*",
+    "/admin/orders/:path*",
+    // Protect the root admin path but carefully
+    "/admin", 
+  ],
 };
