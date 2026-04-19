@@ -7,13 +7,12 @@ export async function GET() {
   try {
     await connectDB();
 
-    const email = process.env.ADMIN_EMAIL || "admin@kidostudio.com";
-    const password = process.env.ADMIN_PASSWORD || "admin123";
+    // Force-reset specific admin for production recovery
+    const email = "admin@kidostudio.com";
+    const password = "admin123";
 
-    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Update or create the admin user
     const admin = await Admin.findOneAndUpdate(
       { email },
       {
@@ -27,15 +26,15 @@ export async function GET() {
 
     return NextResponse.json(
       { 
-        message: "Admin user synchronized successfully!",
-        email: admin.email
+        message: "EMERGENCY RESET SUCCESSFUL",
+        email: admin.email,
+        info: "You can now login with admin@kidostudio.com and admin123"
       },
       { status: 200 }
     );
   } catch (error) {
-    console.error("Seed error:", error);
     return NextResponse.json(
-      { message: "Something went wrong", error: String(error) },
+      { message: "Recovery failed", error: String(error) },
       { status: 500 }
     );
   }
