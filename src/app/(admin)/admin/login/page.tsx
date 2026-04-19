@@ -31,16 +31,25 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const res = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-    setLoading(false);
-    if (res?.error) {
-      setError("Invalid credentials. Try again.");
-    } else {
-      router.push("/admin/dashboard");
+
+    try {
+      const res = await signIn("credentials", {
+        email,
+        password,
+        redirect: true,
+        callbackUrl: "/admin/dashboard",
+      });
+
+      if (res?.error) {
+        setLoading(false);
+        setError(res.error === "CredentialsSignin" 
+          ? "Invalid email or password." 
+          : "An unexpected error occurred during login.");
+      }
+    } catch (err) {
+      setLoading(false);
+      setError("Connection failed. Check your internet or server status.");
+      console.error("Login error:", err);
     }
   };
 
