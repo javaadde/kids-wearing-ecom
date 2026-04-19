@@ -7,7 +7,7 @@ import bcrypt from "bcryptjs";
 // Extend the default session and user types
 export interface ExtendedUser extends User {
   role?: string;
-  id?: string;
+  id: string; // Must be string (not optional) to match base User interface
 }
 
 export const authOptions: NextAuthOptions = {
